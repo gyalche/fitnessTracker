@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Pace Social",
+    "slug": "pace-social",
+    "scheme": "pacesocial",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pacesocial.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Pace Social uses your location to record workouts and render routes.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Pace Social uses your location to support workout tracking in the background."
+      }
+    },
+    "android": {
+      "package": "com.pacesocial.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B1020"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Pace Social to track your activity route while you move."
+        }
+      ],
+      "expo-asset",
+      "expo-font"
+    ]
+  }
+}
