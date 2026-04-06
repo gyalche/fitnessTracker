@@ -57,21 +57,7 @@ export const mockAuthRepository: AuthRepository = {
   },
   async signUp(input: SignUpInput) {
     await wait();
-    return {
-      user: {
-        ...mockUser,
-        email: input.email
-      },
-      profile: {
-        ...mockProfile,
-        displayName: input.displayName
-      },
-      privacy: mockPrivacy,
-      tokens: {
-        accessToken: "mock-access",
-        refreshToken: "mock-refresh"
-      }
-    };
+    void input;
   },
   async forgotPassword() {
     await wait();

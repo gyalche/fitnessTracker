@@ -454,7 +454,11 @@ export const liveAuthRepository: AuthRepository = {
       throw new Error("Supabase sign-up completed without an active session. Disable email confirmation or verify the email, then sign in.");
     }
 
-    return buildAuthSession(data.user, data.session.access_token);
+    const { error: signOutError } = await supabase.auth.signOut();
+
+    if (signOutError) {
+      throwSupabaseError(signOutError);
+    }
   },
   async forgotPassword(email: string) {
     const { error } = await supabase.auth.resetPasswordForEmail(email);

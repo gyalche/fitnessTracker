@@ -25,8 +25,8 @@ export function SignInScreen({ navigation, route }: Props) {
   const { control, handleSubmit } = useForm<FormValues>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
-      email: "athlete@pacesocial.app",
-      password: "password123"
+      email: "",
+      password: ""
     }
   });
 

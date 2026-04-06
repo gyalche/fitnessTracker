@@ -13,7 +13,6 @@ import { AuthStackParamList } from "@/navigation/types";
 import { AppText } from "@/shared/ui/AppText";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
-import { api } from "@/shared/services/api";
 import { colors } from "@/theme/colors";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "SignUp">;
@@ -54,7 +53,6 @@ export function SignUpScreen({ navigation }: Props) {
           try {
             setErrorMessage(null);
             await mutateAsync(values);
-            await api.auth.signOut();
             navigation.replace("SignIn", { justSignedUp: true });
           } catch (error) {
             setErrorMessage(formatAuthError(error instanceof Error ? error.message : "Unable to create account."));

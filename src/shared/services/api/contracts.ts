@@ -34,7 +34,7 @@ export interface CreateActivityInput {
 
 export interface AuthRepository {
   signIn(email: string, password: string): Promise<AuthSession>;
-  signUp(input: SignUpInput): Promise<AuthSession>;
+  signUp(input: SignUpInput): Promise<void>;
   forgotPassword(email: string): Promise<void>;
   completeOnboarding(input: OnboardingInput): Promise<AuthSession>;
   signOut(): Promise<void>;

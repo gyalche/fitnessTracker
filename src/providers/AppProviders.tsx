@@ -15,6 +15,20 @@ const queryClient = new QueryClient({
   }
 });
 
+const BOOTSTRAP_TIMEOUT_MS = 6000;
+
+async function bootstrapSessionWithTimeout() {
+  return Promise.race([
+    bootstrapAuthSession(),
+    new Promise<null>((resolve) => {
+      setTimeout(() => {
+        console.warn(`Auth bootstrap exceeded ${BOOTSTRAP_TIMEOUT_MS}ms. Falling back to signed out state.`);
+        resolve(null);
+      }, BOOTSTRAP_TIMEOUT_MS);
+    })
+  ]);
+}
+
 function SessionBootstrap() {
   const setSession = useSessionStore((state) => state.setSession);
   const clearSession = useSessionStore((state) => state.clearSession);
@@ -23,7 +37,7 @@ function SessionBootstrap() {
   useEffect(() => {
     let isMounted = true;
 
-    bootstrapAuthSession()
+    bootstrapSessionWithTimeout()
       .then((session) => {
         if (!isMounted) {
           return;
@@ -47,16 +61,23 @@ function SessionBootstrap() {
         }
       });
 
-    const unsubscribe = subscribeToAuthSession(async (session) => {
-      if (!isMounted) {
-        return;
-      }
+    const unsubscribe = subscribeToAuthSession((session) => {
+      void (async () => {
+        if (!isMounted) {
+          return;
+        }
 
-      if (session) {
-        setSession(session);
-      } else {
-        clearSession();
-      }
+        if (session) {
+          setSession(session);
+        } else {
+          clearSession();
+        }
+      })().catch((error) => {
+        console.error(error);
+        if (isMounted) {
+          clearSession();
+        }
+      });
     });
 
     return () => {
