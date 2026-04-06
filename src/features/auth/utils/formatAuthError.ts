@@ -21,5 +21,9 @@ export function formatAuthError(message: string) {
     return "Supabase tables are missing. Open the Supabase SQL Editor, run docs/supabase.sql from this repo, then restart Expo.";
   }
 
+  if (normalized.includes("bootstrap rows are missing") || normalized.includes("auth.users trigger")) {
+    return "Supabase profile bootstrap is missing. Re-run docs/supabase.sql so the auth.users trigger creates profiles and privacy_settings rows.";
+  }
+
   return message;
 }

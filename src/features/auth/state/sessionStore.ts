@@ -1,17 +1,16 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
 
 import { AuthSession } from "@/shared/types/api";
 
+export type AuthStatus = "bootstrapping" | "signed_out" | "signed_in";
+
 interface SessionState {
   session: AuthSession | null;
-  isAuthenticated: boolean;
-  isHydrated: boolean;
+  status: AuthStatus;
   needsOnboarding: boolean;
-  hydrateSession: (session: AuthSession) => void;
-  markHydrated: () => void;
-  signOut: () => void;
+  setSession: (session: AuthSession | null) => void;
+  finishBootstrap: () => void;
+  clearSession: () => void;
 }
 
 function getNeedsOnboarding(session: AuthSession | null) {
@@ -22,41 +21,24 @@ function getNeedsOnboarding(session: AuthSession | null) {
   return !session.profile.preferredSports.length || !session.profile.weeklyGoalMinutes;
 }
 
-export const useSessionStore = create<SessionState>()(
-  persist(
-    (set) => ({
-      session: null,
-      isAuthenticated: false,
-      isHydrated: false,
-      needsOnboarding: false,
-      hydrateSession: (session) =>
-        set({
-          session,
-          isAuthenticated: true,
-          needsOnboarding: getNeedsOnboarding(session)
-        }),
-      markHydrated: () =>
-        set({
-          isHydrated: true
-        }),
-      signOut: () =>
-        set({
-          session: null,
-          isAuthenticated: false,
-          needsOnboarding: false
-        })
+export const useSessionStore = create<SessionState>((set) => ({
+  session: null,
+  status: "bootstrapping",
+  needsOnboarding: false,
+  setSession: (session) =>
+    set({
+      session,
+      status: session ? "signed_in" : "signed_out",
+      needsOnboarding: getNeedsOnboarding(session)
     }),
-    {
-      name: "pace-social-session",
-      storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({
-        session: state.session,
-        isAuthenticated: state.isAuthenticated,
-        needsOnboarding: state.needsOnboarding
-      }),
-      onRehydrateStorage: () => (state) => {
-        state?.markHydrated();
-      }
-    }
-  )
-);
+  finishBootstrap: () =>
+    set((state) => ({
+      status: state.session ? "signed_in" : "signed_out"
+    })),
+  clearSession: () =>
+    set({
+      session: null,
+      status: "signed_out",
+      needsOnboarding: false
+    })
+}));

@@ -5,6 +5,12 @@
 
 create extension if not exists pgcrypto;
 
+grant usage on schema public to anon, authenticated, service_role;
+grant all on all tables in schema public to authenticated, service_role;
+grant all on all sequences in schema public to authenticated, service_role;
+alter default privileges in schema public grant all on tables to authenticated, service_role;
+alter default privileges in schema public grant all on sequences to authenticated, service_role;
+
 create table if not exists public.profiles (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null unique references auth.users(id) on delete cascade,
@@ -118,6 +124,73 @@ alter table public.likes enable row level security;
 alter table public.notifications enable row level security;
 alter table public.clubs enable row level security;
 alter table public.challenges enable row level security;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  resolved_display_name text;
+  resolved_handle text;
+begin
+  resolved_display_name := coalesce(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1), 'Pace Athlete');
+  resolved_handle := '@' || left(regexp_replace(lower(resolved_display_name), '[^a-z0-9]+', '', 'g'), 18);
+
+  insert into public.profiles (
+    user_id,
+    display_name,
+    handle,
+    bio,
+    city,
+    preferred_sports,
+    weekly_goal_minutes,
+    followers_count,
+    following_count,
+    club_count
+  )
+  values (
+    new.id,
+    resolved_display_name,
+    resolved_handle,
+    '',
+    'Set your city',
+    '{}',
+    null,
+    0,
+    0,
+    0
+  )
+  on conflict (user_id) do update
+  set display_name = excluded.display_name;
+
+  insert into public.privacy_settings (
+    user_id,
+    profile_visibility,
+    activity_visibility,
+    map_visibility,
+    allow_tagging,
+    allow_club_invites
+  )
+  values (
+    new.id,
+    'public',
+    'followers',
+    'start_end_hidden',
+    true,
+    true
+  )
+  on conflict (user_id) do nothing;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute procedure public.handle_new_user();
 
 create policy "profiles are readable by authenticated users"
 on public.profiles for select

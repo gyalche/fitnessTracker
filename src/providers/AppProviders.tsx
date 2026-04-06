@@ -16,9 +16,9 @@ const queryClient = new QueryClient({
 });
 
 function SessionBootstrap() {
-  const hydrateSession = useSessionStore((state) => state.hydrateSession);
-  const clearSession = useSessionStore((state) => state.signOut);
-  const markHydrated = useSessionStore((state) => state.markHydrated);
+  const setSession = useSessionStore((state) => state.setSession);
+  const clearSession = useSessionStore((state) => state.clearSession);
+  const finishBootstrap = useSessionStore((state) => state.finishBootstrap);
 
   useEffect(() => {
     let isMounted = true;
@@ -30,7 +30,7 @@ function SessionBootstrap() {
         }
 
         if (session) {
-          hydrateSession(session);
+          setSession(session);
         } else {
           clearSession();
         }
@@ -43,7 +43,7 @@ function SessionBootstrap() {
       })
       .finally(() => {
         if (isMounted) {
-          markHydrated();
+          finishBootstrap();
         }
       });
 
@@ -53,7 +53,7 @@ function SessionBootstrap() {
       }
 
       if (session) {
-        hydrateSession(session);
+        setSession(session);
       } else {
         clearSession();
       }
@@ -63,7 +63,7 @@ function SessionBootstrap() {
       isMounted = false;
       unsubscribe();
     };
-  }, [clearSession, hydrateSession, markHydrated]);
+  }, [clearSession, finishBootstrap, setSession]);
 
   return null;
 }

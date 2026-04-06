@@ -4,12 +4,9 @@ import { useSessionStore } from "@/features/auth/state/sessionStore";
 import { api } from "@/shared/services/api";
 
 export function useSignIn() {
-  const hydrateSession = useSessionStore((state) => state.hydrateSession);
-
   return useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
-      api.auth.signIn(email, password),
-    onSuccess: hydrateSession
+      api.auth.signIn(email, password)
   });
 }
 
@@ -26,16 +23,16 @@ export function useForgotPassword() {
 }
 
 export function useCompleteOnboarding() {
-  const hydrateSession = useSessionStore((state) => state.hydrateSession);
+  const setSession = useSessionStore((state) => state.setSession);
 
   return useMutation({
     mutationFn: api.auth.completeOnboarding,
-    onSuccess: hydrateSession
+    onSuccess: setSession
   });
 }
 
 export function useSignOut() {
-  const clearSession = useSessionStore((state) => state.signOut);
+  const clearSession = useSessionStore((state) => state.clearSession);
 
   return useMutation({
     mutationFn: api.auth.signOut,

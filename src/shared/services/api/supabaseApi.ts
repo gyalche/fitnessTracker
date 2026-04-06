@@ -67,7 +67,12 @@ type PrivacyRow = {
   allow_club_invites: boolean;
 };
 
-function toSupabaseMessage(error: { message: string; code?: string | null }) {
+type SupabaseErrorLike = {
+  message: string;
+  code?: string | null;
+};
+
+function toSupabaseMessage(error: SupabaseErrorLike) {
   const combined = `${error.code ? `${error.code}: ` : ""}${error.message}`.toLowerCase();
 
   if (combined.includes("pgrst205") || combined.includes("schema cache") || combined.includes("could not find the table")) {
@@ -77,7 +82,7 @@ function toSupabaseMessage(error: { message: string; code?: string | null }) {
   return error.message;
 }
 
-function throwSupabaseError(error: { message: string; code?: string | null }) {
+function throwSupabaseError(error: SupabaseErrorLike) {
   throw new Error(toSupabaseMessage(error));
 }
 
@@ -248,52 +253,6 @@ async function ensureStarterActivity(userId: string) {
   }
 }
 
-async function ensureProfileRows(user: SupabaseUser, displayName?: string) {
-  const preferredName =
-    displayName ||
-    user.user_metadata?.display_name ||
-    user.email?.split("@")[0] ||
-    "Pace Athlete";
-
-  const profilePayload = {
-    user_id: user.id,
-    display_name: preferredName,
-    handle: slugifyHandle(preferredName),
-    bio: "",
-    city: "Set your city",
-    preferred_sports: [],
-    weekly_goal_minutes: null,
-    followers_count: 0,
-    following_count: 0,
-    club_count: 0
-  };
-
-  const privacyPayload = {
-    user_id: user.id,
-    profile_visibility: "public",
-    activity_visibility: "followers",
-    map_visibility: "start_end_hidden",
-    allow_tagging: true,
-    allow_club_invites: true
-  };
-
-  const { error: profileError } = await supabase.from("profiles").upsert(profilePayload, {
-    onConflict: "user_id"
-  });
-
-  if (profileError) {
-    throwSupabaseError(profileError);
-  }
-
-  const { error: privacyError } = await supabase.from("privacy_settings").upsert(privacyPayload, {
-    onConflict: "user_id"
-  });
-
-  if (privacyError) {
-    throwSupabaseError(privacyError);
-  }
-}
-
 async function fetchProfileByUserId(userId: string) {
   const { data, error } = await supabase.from("profiles").select("*").eq("user_id", userId).single();
 
@@ -316,6 +275,25 @@ async function fetchPrivacyByUserId(userId: string) {
   }
 
   return toPrivacy(data as PrivacyRow);
+}
+
+async function waitForBootstrapRows(userId: string, retries = 12, delayMs = 350) {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < retries; attempt += 1) {
+    try {
+      const [profile, privacy] = await Promise.all([fetchProfileByUserId(userId), fetchPrivacyByUserId(userId)]);
+      return { profile, privacy };
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("Unable to load Supabase bootstrap rows.");
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw new Error(
+    lastError?.message ||
+      "Profile bootstrap rows are missing. Run docs/supabase.sql so the auth.users trigger can create profiles and privacy_settings rows."
+  );
 }
 
 async function fetchLikeCounts(activityIds: string[]) {
@@ -399,9 +377,7 @@ async function getCurrentSupabaseUser() {
 }
 
 async function buildAuthSession(user: SupabaseUser, accessToken?: string): Promise<AuthSession> {
-  await ensureProfileRows(user);
-
-  const [profile, privacy] = await Promise.all([fetchProfileByUserId(user.id), fetchPrivacyByUserId(user.id)]);
+  const { profile, privacy } = await waitForBootstrapRows(user.id);
 
   return {
     user: toAppUser(user),
@@ -478,7 +454,6 @@ export const liveAuthRepository: AuthRepository = {
       throw new Error("Supabase sign-up completed without an active session. Disable email confirmation or verify the email, then sign in.");
     }
 
-    await ensureProfileRows(data.user, input.displayName);
     return buildAuthSession(data.user, data.session.access_token);
   },
   async forgotPassword(email: string) {

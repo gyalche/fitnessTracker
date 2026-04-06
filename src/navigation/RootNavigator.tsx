@@ -21,11 +21,10 @@ const navTheme: Theme = {
 };
 
 export function RootNavigator() {
-  const isHydrated = useSessionStore((state) => state.isHydrated);
-  const isAuthenticated = useSessionStore((state) => state.isAuthenticated);
+  const status = useSessionStore((state) => state.status);
   const needsOnboarding = useSessionStore((state) => state.needsOnboarding);
 
-  if (!isHydrated) {
+  if (status === "bootstrapping") {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <InitialSplash />
@@ -35,7 +34,7 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer theme={navTheme}>
-      {!isAuthenticated ? <AuthNavigator /> : needsOnboarding ? <OnboardingScreen /> : <AppNavigator />}
+      {status !== "signed_in" ? <AuthNavigator /> : needsOnboarding ? <OnboardingScreen /> : <AppNavigator />}
     </NavigationContainer>
   );
 }
